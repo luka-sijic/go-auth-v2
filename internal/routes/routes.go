@@ -13,4 +13,5 @@ func Routes(e *echo.Echo) {
 	})
 	e.POST("/register", handler.Register)
 	e.POST("/login", handler.Login)
+	e.POST("/addfriend", handler.AddFriend)
 }

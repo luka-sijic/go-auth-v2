@@ -2,14 +2,15 @@ package database
 
 import (
 	"context"
-	"github.com/bwmarrin/snowflake"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
-	"github.com/redis/go-redis/v9"
 	"hash/fnv"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/bwmarrin/snowflake"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 
 func init() {
 	if err := godotenv.Load(".env"); err != nil {
-		log.Fatalf("Error loading .env file", err)
+		log.Fatalln("Error loading .env file", err)
 	}
 }
 
@@ -46,8 +47,8 @@ func ConnectRedis() {
 
 	RDB = redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
-		Password: redisPassword, // no password if empty
-		DB:       0,             // default DB
+		Password: redisPassword,
+		DB:       0,
 	})
 
 	_, err := RDB.Ping(context.Background()).Result()

@@ -6,8 +6,9 @@ import (
 	"app/pkg/hash"
 	"context"
 
-	"github.com/bwmarrin/snowflake"
 	"log"
+
+	"github.com/bwmarrin/snowflake"
 )
 
 func CreateUser(user *models.UserDTO) bool {
@@ -66,4 +67,8 @@ func LoginUser(user *models.UserDTO) bool {
 
 	log.Println(id)
 	return true
+}
+
+func AddFriend(user *models.FriendDTO) bool {
+	return false
 }
