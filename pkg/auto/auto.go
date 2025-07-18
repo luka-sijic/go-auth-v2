@@ -4,6 +4,7 @@ import (
 	"app/internal/database"
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,6 +16,15 @@ func Init() error {
 			password TEXT NOT NULL,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
+
+		CREATE TABLE IF NOT EXISTS friends (
+			user_id BIGINT NOT NULL,
+			requester_id BIGINT NOT NULL,
+			STATUS TEXT NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT now(),
+			updated_at TIMESTAMP NOT NULL DEFAULT now(),
+			PRIMARY KEY (user_id, requester_id)
+		);
 	`
 
 	for i, pool := range database.Pools {
@@ -22,6 +32,7 @@ func Init() error {
 			return fmt.Errorf("shard %d: %w", i, err)
 		}
 	}
+
 	return nil
 }
 

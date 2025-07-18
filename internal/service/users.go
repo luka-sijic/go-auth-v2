@@ -40,6 +40,7 @@ func CreateUser(user *models.UserDTO) bool {
 	}
 
 	database.RDB.HSet(context.Background(), "user:id_map", user.Username, id.String())
+	database.RDB.HSet(context.Background(), "user:username_map", id.String(), user.Username)
 	database.RDB.Do(context.Background(), "BF.ADD", "users", user.Username)
 
 	return true
@@ -67,8 +68,4 @@ func LoginUser(user *models.UserDTO) bool {
 
 	log.Println(id)
 	return true
-}
-
-func AddFriend(user *models.FriendDTO) bool {
-	return false
 }

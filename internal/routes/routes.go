@@ -2,6 +2,7 @@ package routes
 
 import (
 	"app/internal/handler"
+	"app/pkg/secret"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -13,5 +14,8 @@ func Routes(e *echo.Echo) {
 	})
 	e.POST("/register", handler.Register)
 	e.POST("/login", handler.Login)
-	e.POST("/addfriend", handler.AddFriend)
+	e.POST("/friend", handler.AddFriend, secret.Auth)
+	e.GET("/friend", handler.GetRequest, secret.Auth)
+	e.POST("/friend/respond", handler.Respond, secret.Auth)
+	e.GET("/friend/:id", handler.GetFriends, secret.Auth)
 }

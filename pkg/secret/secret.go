@@ -2,10 +2,12 @@ package secret
 
 import (
 	"app/internal/models"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -24,6 +26,25 @@ func init() {
 }
 
 var JwtSecret = []byte(jwtToken)
+
+func GenerateJWT(username string, expiration time.Duration) string {
+	claims := &models.Claims{
+		Username: username,
+		Role:     1,
+		Status:   1,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	t, err := token.SignedString(JwtSecret)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return t
+}
 
 func Auth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

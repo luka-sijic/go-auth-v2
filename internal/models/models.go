@@ -8,7 +8,12 @@ type UserDTO struct {
 }
 
 type FriendDTO struct {
-	Username string `json:"username"`
+	Friend string `json:"friend"`
+}
+
+type FriendActionDTO struct {
+	FriendID string `json:"friendId"`
+	Action   string `json:"action"`
 }
 
 type Claims struct {
