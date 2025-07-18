@@ -24,13 +24,7 @@ func CreateUser(user *models.UserDTO) bool {
 		return false
 	}
 
-	node, err := snowflake.NewNode(1)
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-
-	id := node.Generate()
+	id := database.SfNode.Generate()
 	db := database.GetShardPool(id)
 
 	_, err = db.Exec(context.Background(), "INSERT INTO users (id, username, password) VALUES ($1,$2,$3)", id, user.Username, hashedPassword)

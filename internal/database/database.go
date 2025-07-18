@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	Pools []*pgxpool.Pool
-	RDB   *redis.Client
+	Pools  []*pgxpool.Pool
+	SfNode *snowflake.Node
+	RDB    *redis.Client
 )
 
 func init() {
@@ -37,6 +38,11 @@ func Connect() {
 		}
 		log.Printf("Shard %d connected\n", i)
 		Pools = append(Pools, pool)
+	}
+	var err error
+	SfNode, err = snowflake.NewNode(1)
+	if err != nil {
+		log.Printf("snowflake node init failed: %v", err)
 	}
 	ConnectRedis()
 }
