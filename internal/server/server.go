@@ -1,7 +1,12 @@
 package server
 
 import (
+	"app/internal/database"
 	"app/internal/routes"
+	"app/internal/service"
+	"app/pkg/auto"
+	"log"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -19,7 +24,17 @@ func Start() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	routes.Routes(e)
+	app, err := database.NewApp()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := auto.Init(app.Pools); err != nil {
+		log.Fatalf("could not create users table: %v", err)
+	}
+
+	userSvc := service.NewService(app)
+	routes.Routes(e, userSvc)
 
 	e.Logger.Fatal(e.Start(":8081"))
 }

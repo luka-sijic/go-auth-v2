@@ -1,14 +1,13 @@
 package auto
 
 import (
-	"app/internal/database"
 	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Init() error {
+func Init(Pools []*pgxpool.Pool) error {
 	sql := `
 		CREATE TABLE IF NOT EXISTS users (
 			id BIGINT PRIMARY KEY,
@@ -27,7 +26,7 @@ func Init() error {
 		);
 	`
 
-	for i, pool := range database.Pools {
+	for i, pool := range Pools {
 		if err := execOnShard(pool, sql); err != nil {
 			return fmt.Errorf("shard %d: %w", i, err)
 		}

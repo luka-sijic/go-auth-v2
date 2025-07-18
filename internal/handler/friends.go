@@ -2,7 +2,6 @@ package handler
 
 import (
 	"app/internal/models"
-	"app/internal/service"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func AddFriend(c echo.Context) error {
+func (h *UserHandler) AddFriend(c echo.Context) error {
 	username := c.Get("username").(string)
 	user := new(models.FriendDTO)
 	if err := c.Bind(&user); err != nil {
@@ -20,7 +19,7 @@ func AddFriend(c echo.Context) error {
 	fmt.Println(username)
 	fmt.Println(user.Friend)
 
-	result := service.AddFriend(username, user)
+	result := h.svc.AddFriend(username, user)
 	if !result {
 		return c.JSON(http.StatusNotFound, "Failed to add friend")
 	}
@@ -28,20 +27,20 @@ func AddFriend(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Friend request sent")
 }
 
-func GetFriends(c echo.Context) error {
+func (h *UserHandler) GetFriends(c echo.Context) error {
 	username := c.Param("id")
 
-	result := service.GetFriends(username)
+	result := h.svc.GetFriends(username)
 	if len(result) == 0 {
 		return c.JSON(http.StatusNotFound, "No friends found")
 	}
 	return c.JSON(http.StatusOK, result)
 }
 
-func GetRequest(c echo.Context) error {
+func (h *UserHandler) GetRequest(c echo.Context) error {
 	username := c.Get("username").(string)
 
-	result := service.GetRequests(username)
+	result := h.svc.GetRequests(username)
 	if len(result) == 0 {
 		return c.JSON(http.StatusOK, "")
 	}
@@ -49,14 +48,14 @@ func GetRequest(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-func Respond(c echo.Context) error {
+func (h *UserHandler) Respond(c echo.Context) error {
 	username := c.Get("username").(string)
 	action := new(models.FriendActionDTO)
 	if err := c.Bind(&action); err != nil {
 		log.Println(err)
 	}
 
-	result := service.FriendResponse(username, action)
+	result := h.svc.FriendResponse(username, action)
 	if !result {
 		fmt.Println("Error")
 		return c.JSON(http.StatusInternalServerError, "Failed to update friend request")

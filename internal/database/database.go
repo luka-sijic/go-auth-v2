@@ -13,11 +13,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var (
-	Pools  []*pgxpool.Pool
-	SfNode *snowflake.Node
-	RDB    *redis.Client
-)
+type App struct {
+	Pools []*pgxpool.Pool
+	Node  *snowflake.Node
+	RDB   *redis.Client
+}
 
 func init() {
 	if err := godotenv.Load(".env"); err != nil {
@@ -25,55 +25,65 @@ func init() {
 	}
 }
 
-func Connect() {
+func NewApp() (*App, error) {
+	node, err := snowflake.NewNode(1)
+	if err != nil {
+		log.Printf("snowflake node init failed: %v", err)
+		return nil, err
+	}
+	pools := ConnectPostgres()
+	rdb := ConnectRedis()
+
+	return &App{Node: node, Pools: pools, RDB: rdb}, nil
+}
+
+func ConnectPostgres() []*pgxpool.Pool {
 	raw := os.Getenv("DATABASE_URLS")
 	if raw == "" {
 		log.Fatal("DATABASE_URLS is not set; should be comma-separated URLs")
+		return nil
 	}
 	urls := strings.Split(raw, ",")
+	pools := make([]*pgxpool.Pool, 0, 4)
 	for i, u := range urls {
 		pool, err := pgxpool.New(context.Background(), strings.TrimSpace(u))
 		if err != nil {
 			log.Fatalf("Unable to connect to database shard %d: %v", i, err)
 		}
 		log.Printf("Shard %d connected\n", i)
-		Pools = append(Pools, pool)
+		pools = append(pools, pool)
 	}
-	var err error
-	SfNode, err = snowflake.NewNode(1)
-	if err != nil {
-		log.Printf("snowflake node init failed: %v", err)
-	}
-	ConnectRedis()
+	return pools
 }
 
-func ConnectRedis() {
+func ConnectRedis() *redis.Client {
 	redisAddr := os.Getenv("REDIS_ADDR")
 	redisPassword := os.Getenv("REDIS_PASS")
 
-	RDB = redis.NewClient(&redis.Options{
+	rdb := redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
 		Password: redisPassword,
 		DB:       0,
 	})
 
-	_, err := RDB.Ping(context.Background()).Result()
+	_, err := rdb.Ping(context.Background()).Result()
 	if err != nil {
 		log.Fatalf("Unable to connect to Redis: %v\n", err)
 	}
 	log.Println("Redis connected")
+	return rdb
 }
 
-func Close() {
-	for i, pool := range Pools {
+func (a *App) Close() {
+	for i, pool := range a.Pools {
 		pool.Close()
 		log.Printf("Shard %d closed\n", i)
 	}
 }
 
-func GetShardPool(key snowflake.ID) *pgxpool.Pool {
+func GetShardPool(pools []*pgxpool.Pool, key snowflake.ID) *pgxpool.Pool {
 	h := fnv.New32a()
 	h.Write([]byte(key.String()))
-	idx := int(h.Sum32()) % len(Pools)
-	return Pools[idx]
+	idx := int(h.Sum32()) % len(pools)
+	return pools[idx]
 }

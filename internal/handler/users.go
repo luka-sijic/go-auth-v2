@@ -2,7 +2,6 @@ package handler
 
 import (
 	"app/internal/models"
-	"app/internal/service"
 	"log"
 	"net/http"
 
@@ -11,14 +10,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Register(c echo.Context) error {
+func (h *UserHandler) Register(c echo.Context) error {
 	user := new(models.UserDTO)
 	if err := c.Bind(user); err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to bind to user"})
 	}
 
-	result := service.CreateUser(user)
+	result := h.svc.CreateUser(user)
 	if !result {
 		return c.JSON(http.StatusInternalServerError, "Failed to register user")
 	}
@@ -26,13 +25,13 @@ func Register(c echo.Context) error {
 	return c.JSON(http.StatusOK, "User successfully registered")
 }
 
-func Login(c echo.Context) error {
+func (h *UserHandler) Login(c echo.Context) error {
 	user := new(models.UserDTO)
 	if err := c.Bind(&user); err != nil {
 		log.Println(err)
 	}
 
-	result := service.LoginUser(user)
+	result := h.svc.LoginUser(user)
 	if !result {
 		return c.JSON(http.StatusInternalServerError, "Incorrect username/password")
 	}

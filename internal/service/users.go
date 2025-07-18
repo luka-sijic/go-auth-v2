@@ -11,8 +11,8 @@ import (
 	"github.com/bwmarrin/snowflake"
 )
 
-func CreateUser(user *models.UserDTO) bool {
-	res, err := database.RDB.Do(context.Background(), "BF.EXISTS", "users", user.Username).Bool()
+func (infra *Infra) CreateUser(user *models.UserDTO) bool {
+	res, err := infra.RDB.Do(context.Background(), "BF.EXISTS", "users", user.Username).Bool()
 	if err != nil || res {
 		log.Println(err)
 		return false
@@ -24,8 +24,8 @@ func CreateUser(user *models.UserDTO) bool {
 		return false
 	}
 
-	id := database.SfNode.Generate()
-	db := database.GetShardPool(id)
+	id := infra.Node.Generate()
+	db := database.GetShardPool(infra.Pools, id)
 
 	_, err = db.Exec(context.Background(), "INSERT INTO users (id, username, password) VALUES ($1,$2,$3)", id, user.Username, hashedPassword)
 	if err != nil {
@@ -33,15 +33,15 @@ func CreateUser(user *models.UserDTO) bool {
 		return false
 	}
 
-	database.RDB.HSet(context.Background(), "user:id_map", user.Username, id.String())
-	database.RDB.HSet(context.Background(), "user:username_map", id.String(), user.Username)
-	database.RDB.Do(context.Background(), "BF.ADD", "users", user.Username)
+	infra.RDB.HSet(context.Background(), "user:id_map", user.Username, id.String())
+	infra.RDB.HSet(context.Background(), "user:username_map", id.String(), user.Username)
+	infra.RDB.Do(context.Background(), "BF.ADD", "users", user.Username)
 
 	return true
 }
 
-func LoginUser(user *models.UserDTO) bool {
-	idStr, err := database.RDB.HGet(context.Background(), "user:id_map", user.Username).Result()
+func (infra *Infra) LoginUser(user *models.UserDTO) bool {
+	idStr, err := infra.RDB.HGet(context.Background(), "user:id_map", user.Username).Result()
 	if err != nil {
 		log.Println(err)
 		return false
@@ -51,7 +51,7 @@ func LoginUser(user *models.UserDTO) bool {
 		log.Println(err)
 		return false
 	}
-	db := database.GetShardPool(id)
+	db := database.GetShardPool(infra.Pools, id)
 
 	var storedHash string
 	err = db.QueryRow(context.Background(), "SELECT password FROM users WHERE username=$1", user.Username).Scan(&storedHash)

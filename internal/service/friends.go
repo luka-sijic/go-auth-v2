@@ -10,14 +10,14 @@ import (
 	"github.com/bwmarrin/snowflake"
 )
 
-func AddFriend(username string, user *models.FriendDTO) bool {
-	res, err := database.RDB.Do(context.Background(), "BF.EXISTS", "users", user.Friend).Bool()
+func (infra *Infra) AddFriend(username string, user *models.FriendDTO) bool {
+	res, err := infra.RDB.Do(context.Background(), "BF.EXISTS", "users", user.Friend).Bool()
 	if err != nil || !res {
 		log.Printf("User not found: %v", err)
 		return false
 	}
 
-	val, err := database.RDB.HMGet(context.Background(), "user:id_map", username, user.Friend).Result()
+	val, err := infra.RDB.HMGet(context.Background(), "user:id_map", username, user.Friend).Result()
 	if err != nil {
 		log.Println(err)
 		return false
@@ -31,7 +31,7 @@ func AddFriend(username string, user *models.FriendDTO) bool {
 		log.Println(err)
 		return false
 	}
-	db := database.GetShardPool(id)
+	db := database.GetShardPool(infra.Pools, id)
 
 	_, err = db.Exec(context.Background(), "INSERT INTO friends (user_id, status, requester_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", receiver, "pending", id)
 	if err != nil {
@@ -44,7 +44,7 @@ func AddFriend(username string, user *models.FriendDTO) bool {
 		log.Println(err)
 		return false
 	}
-	db = database.GetShardPool(id)
+	db = database.GetShardPool(infra.Pools, id)
 
 	_, err = db.Exec(context.Background(), "INSERT INTO friends (user_id, status, requester_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", receiver, "pending", sender)
 	if err != nil {
@@ -55,8 +55,8 @@ func AddFriend(username string, user *models.FriendDTO) bool {
 	return true
 }
 
-func GetFriends(username string) []models.FriendDTO {
-	val, err := database.RDB.HGet(context.Background(), "user:id_map", username).Result()
+func (infra *Infra) GetFriends(username string) []models.FriendDTO {
+	val, err := infra.RDB.HGet(context.Background(), "user:id_map", username).Result()
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -67,7 +67,7 @@ func GetFriends(username string) []models.FriendDTO {
 		log.Println(err)
 		return nil
 	}
-	db := database.GetShardPool(id)
+	db := database.GetShardPool(infra.Pools, id)
 	var friends []models.FriendDTO
 	rows, err := db.Query(context.Background(), "SELECT user_id FROM friends WHERE requester_id=$1 AND status='accepted'", id.Int64())
 	if err != nil {
@@ -84,7 +84,7 @@ func GetFriends(username string) []models.FriendDTO {
 			return nil
 		}
 		friendid := fmt.Sprintf("%d", friend)
-		val, err := database.RDB.HGet(context.Background(), "user:username_map", friendid).Result()
+		val, err := infra.RDB.HGet(context.Background(), "user:username_map", friendid).Result()
 		if err != nil {
 			log.Println(err)
 			return nil
@@ -95,8 +95,8 @@ func GetFriends(username string) []models.FriendDTO {
 	return friends
 }
 
-func GetRequests(username string) []models.FriendDTO {
-	val, err := database.RDB.HGet(context.Background(), "user:id_map", username).Result()
+func (infra *Infra) GetRequests(username string) []models.FriendDTO {
+	val, err := infra.RDB.HGet(context.Background(), "user:id_map", username).Result()
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -107,7 +107,7 @@ func GetRequests(username string) []models.FriendDTO {
 		log.Println(err)
 		return nil
 	}
-	db := database.GetShardPool(id)
+	db := database.GetShardPool(infra.Pools, id)
 	var friends []models.FriendDTO
 	rows, err := db.Query(context.Background(), "SELECT requester_id FROM friends WHERE user_id=$1 AND status='pending'", id.Int64())
 	if err != nil {
@@ -124,7 +124,7 @@ func GetRequests(username string) []models.FriendDTO {
 			return nil
 		}
 		friendid := fmt.Sprintf("%d", friend)
-		val, err := database.RDB.HGet(context.Background(), "user:username_map", friendid).Result()
+		val, err := infra.RDB.HGet(context.Background(), "user:username_map", friendid).Result()
 		if err != nil {
 			log.Println(err)
 			return nil
@@ -141,8 +141,8 @@ func GetRequests(username string) []models.FriendDTO {
 	return friends
 }
 
-func FriendResponse(username string, action *models.FriendActionDTO) bool {
-	val, err := database.RDB.HMGet(context.Background(), "user:id_map", username, action.FriendID).Result()
+func (infra *Infra) FriendResponse(username string, action *models.FriendActionDTO) bool {
+	val, err := infra.RDB.HMGet(context.Background(), "user:id_map", username, action.FriendID).Result()
 	if err != nil {
 		log.Println(err)
 		return false
@@ -155,7 +155,7 @@ func FriendResponse(username string, action *models.FriendActionDTO) bool {
 		log.Println(err)
 		return false
 	}
-	db := database.GetShardPool(id)
+	db := database.GetShardPool(infra.Pools, id)
 	_, err = db.Exec(context.Background(), "UPDATE friends SET status=$1 WHERE user_id=$2 AND requester_id=$3", action.Action, receiver, sender)
 	if err != nil {
 		log.Println(err)
@@ -167,7 +167,7 @@ func FriendResponse(username string, action *models.FriendActionDTO) bool {
 		log.Println(err)
 		return false
 	}
-	db = database.GetShardPool(id)
+	db = database.GetShardPool(infra.Pools, id)
 	_, err = db.Exec(context.Background(), "UPDATE friends SET status=$1 WHERE user_id=$2 AND requester_id=$3", action.Action, receiver, sender)
 	if err != nil {
 		log.Println(err)
