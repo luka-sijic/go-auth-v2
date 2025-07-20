@@ -20,6 +20,7 @@ func Routes(e *echo.Echo, svc *service.Infra) {
 
 	e.GET("/me", handler.Me)
 	e.GET("/cookie", handler.Cookie)
+	e.GET("/refresh", handler.Refresh)
 
 	e.POST("/friend", userHandler.AddFriend, secret.Auth)
 	e.GET("/friend", userHandler.GetRequest, secret.Auth)

@@ -202,26 +202,25 @@ func (infra *Infra) FriendResponse(username string, action *models.FriendActionD
 }
 
 func (infra *Infra) GetLog(user1, user2 string) []models.Messages {
-	/*key := fmt.Sprintf("conversation:%s:%s", user1, user2)
-	res, err := infra.RDB.XRead(context.Background(), &redis.XReadArgs{
-		Streams: []string{key, "0"},
-		Count:   100,
-		Block:   300,
-	}).Result()
-	if err != nil {
-		fmt.Println("ERROR")
-	}*/
-	key := fmt.Sprintf("conversation:%s:%s", user1, user2)
+	var key string
+	if user1 > user2 {
+		key = fmt.Sprintf("conversation:%s:%s", user1, user2)
+	} else {
+		key = fmt.Sprintf("conversation:%s:%s", user2, user1)
+	}
+	fmt.Println("KEY: ", key)
 	res, err := infra.RDB.XRange(context.Background(), key, "-", "+").Result()
 	if err != nil {
 		log.Println("ERROR")
 	}
 	msgs := make([]models.Messages, 0, len(res))
 	for _, e := range res {
-		msgs = append(msgs, models.Messages{
-			Username: e.Values["username"].(string),
-			Message:  e.Values["message"].(string),
-		})
+		if e.Values["username"].(string) != "" {
+			msgs = append(msgs, models.Messages{
+				Username: e.Values["username"].(string),
+				Message:  e.Values["message"].(string),
+			})
+		}
 		fmt.Println(e.Values["username"].(string))
 		fmt.Println(e.Values["message"].(string))
 	}
