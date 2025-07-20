@@ -14,11 +14,19 @@ import (
 func Start() {
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
-		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowOrigins: []string{"http://127.0.0.1:3000"},
+		AllowMethods: []string{echo.OPTIONS, echo.GET, echo.POST, echo.PUT, echo.DELETE},
+		AllowHeaders: []string{
+			echo.HeaderOrigin,
+			echo.HeaderContentType,
+			echo.HeaderAccept,
+			echo.HeaderAuthorization,
+			echo.HeaderCookie,
+		},
+		ExposeHeaders:    []string{echo.HeaderSetCookie},
 		AllowCredentials: true,
 	}))
+
 	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20)))
 
 	e.Use(middleware.Logger())

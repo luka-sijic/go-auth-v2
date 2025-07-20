@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"hash/fnv"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -82,8 +82,7 @@ func (a *App) Close() {
 }
 
 func GetShardPool(pools []*pgxpool.Pool, key snowflake.ID) *pgxpool.Pool {
-	h := fnv.New32a()
-	h.Write([]byte(key.String()))
-	idx := int(h.Sum32()) % len(pools)
+	idx := (key >> 12) & ((1 << 10) - 1)
+	fmt.Println("\033[32m POOL ID: ", idx, " \033[0m")
 	return pools[idx]
 }

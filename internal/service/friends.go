@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/bwmarrin/snowflake"
+	"github.com/redis/go-redis/v9"
 )
 
 func (infra *Infra) AddFriend(username string, user *models.FriendDTO) bool {
@@ -69,7 +70,18 @@ func (infra *Infra) GetFriends(username string) []models.FriendDTO {
 	}
 	db := database.GetShardPool(infra.Pools, id)
 	var friends []models.FriendDTO
-	rows, err := db.Query(context.Background(), "SELECT user_id FROM friends WHERE requester_id=$1 AND status='accepted'", id.Int64())
+	const sql = `
+		SELECT user_id
+		FROM friends 
+		WHERE requester_id=$1 
+		AND status='accepted'
+		UNION
+		SELECT requester_id
+		FROM friends
+		WHERE user_id=$1
+		AND status='accepted'
+	`
+	rows, err := db.Query(context.Background(), sql, id.Int64())
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -173,6 +185,45 @@ func (infra *Infra) FriendResponse(username string, action *models.FriendActionD
 		log.Println(err)
 		return false
 	}
+	key := fmt.Sprintf("conversation:%s:%s", username, action.FriendID)
+
+	_, err = infra.RDB.XAdd(context.Background(), &redis.XAddArgs{
+		Stream: key,
+		Values: map[string]interface{}{
+			"username": "",
+			"message":  "",
+		},
+	}).Result()
+	if err != nil {
+		log.Println(err)
+	}
 
 	return true
+}
+
+func (infra *Infra) GetLog(user1, user2 string) []models.Messages {
+	/*key := fmt.Sprintf("conversation:%s:%s", user1, user2)
+	res, err := infra.RDB.XRead(context.Background(), &redis.XReadArgs{
+		Streams: []string{key, "0"},
+		Count:   100,
+		Block:   300,
+	}).Result()
+	if err != nil {
+		fmt.Println("ERROR")
+	}*/
+	key := fmt.Sprintf("conversation:%s:%s", user1, user2)
+	res, err := infra.RDB.XRange(context.Background(), key, "-", "+").Result()
+	if err != nil {
+		log.Println("ERROR")
+	}
+	msgs := make([]models.Messages, 0, len(res))
+	for _, e := range res {
+		msgs = append(msgs, models.Messages{
+			Username: e.Values["username"].(string),
+			Message:  e.Values["message"].(string),
+		})
+		fmt.Println(e.Values["username"].(string))
+		fmt.Println(e.Values["message"].(string))
+	}
+	return msgs
 }

@@ -28,12 +28,14 @@ func init() {
 var JwtSecret = []byte(jwtToken)
 
 func GenerateJWT(username string, expiration time.Duration) string {
+	now := time.Now().UTC()
 	claims := &models.Claims{
 		Username: username,
 		Role:     1,
 		Status:   1,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(expiration * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 
@@ -48,15 +50,16 @@ func GenerateJWT(username string, expiration time.Duration) string {
 
 func Auth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		authHeader := c.Request().Header.Get("Authorization")
-		if authHeader == "" {
-			return echo.NewHTTPError(http.StatusUnauthorized, "User must login")
+		cookie, err := c.Cookie("access")
+		if err != nil {
+			log.Println(err)
+			return echo.NewHTTPError(http.StatusUnauthorized, "no access cookie")
 		}
 
-		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
+		t := cookie.Value
 
 		// Parse and validate the token
-		token, err := jwt.ParseWithClaims(tokenString, &models.Claims{}, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(t, &models.Claims{}, func(token *jwt.Token) (interface{}, error) {
 			return JwtSecret, nil
 		})
 
@@ -70,6 +73,7 @@ func Auth(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			// Store the claims in the context for later use
 			c.Set("username", claims.Username)
+			fmt.Println(claims.Username)
 			c.Set("role", claims.Role)
 			c.Set("status", claims.Status)
 			return next(c)

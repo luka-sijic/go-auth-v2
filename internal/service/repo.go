@@ -17,6 +17,7 @@ type Service interface {
 	GetFriends(username string) []models.FriendDTO
 	GetRequests(username string) []models.FriendDTO
 	FriendResponse(username string, action *models.FriendActionDTO) bool
+	GetLog(username1, username2 string) []models.Messages
 }
 
 /*

@@ -62,3 +62,14 @@ func (h *UserHandler) Respond(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, "Friend request updated")
 }
+
+func (h *UserHandler) GetLog(c echo.Context) error {
+	user1 := c.Param("user1")
+	user2 := c.Param("user2")
+
+	res := h.svc.GetLog(user1, user2)
+	if res == nil {
+		log.Panic("Error")
+	}
+	return c.JSON(http.StatusOK, res)
+}
